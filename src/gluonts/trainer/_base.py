@@ -17,7 +17,7 @@ import os
 import tempfile
 import time
 import uuid
-from typing import Any, List, NamedTuple, Optional, Union
+from typing import Any, List, NamedTuple, Optional, Union, Callable
 
 # Third-party imports
 import mxnet as mx
@@ -98,11 +98,6 @@ class Trainer:
         Initializer of the weights of the network (default: "xavier").
     hybridize
         If set to true the network will be hybridized before training
-    post_initialize_cb
-        An optional callback function. If provided the function will be called with the
-        initialized network `post_initialize_cb(net)` before the training starts.
-        This callback can be used to e.g. overwrite parameters for warm starting, to freeze some
-        of the network parameters etc.
     post_epoch_callback
         An optional callback function. If provided the function will be called with the
         epoch number and epoch loss `post_epoch_callback(epoch_no, epoch_loss)` after each epoch.
@@ -123,10 +118,6 @@ class Trainer:
         weight_decay: float = 1e-8,
         init: Union[str, mx.initializer.Initializer] = "xavier",
         hybridize: bool = True,
-        avg_strategy: Union[
-            AveragingStrategy, IterationAveragingStrategy
-        ] = SelectNBestMean(num_models=1),
-        post_initialize_cb: Optional[Callable[[mx.gluon.Block], None]] = None,
         post_epoch_callback: Optional[Callable[[int, float], None]] = None,
     ) -> None:
 
@@ -163,7 +154,6 @@ class Trainer:
         self.hybridize = hybridize
         self.ctx = ctx if ctx is not None else get_mxnet_context()
         self.halt = False
-        self.post_initialize_cb = post_initialize_cb
         self.post_epoch_callback = post_epoch_callback
 
     def set_halt(self, signum: int, stack_frame: Any) -> None:
@@ -243,6 +233,7 @@ class Trainer:
 
                     epoch_loss = mx.metric.Loss()
 
+                    lv = np.nan
                     with tqdm(batch_iter) as it:
                         for batch_no, data_entry in enumerate(it, start=1):
                             if self.halt:

@@ -99,8 +99,8 @@ class Trainer:
     hybridize
         If set to true the network will be hybridized before training
     post_epoch_callback
-        An optional callback function. If provided the function will be called with the
-        epoch number and epoch loss `post_epoch_callback(epoch_no, epoch_loss)` after each epoch.
+        An optional callback function. If provided the function will be called with the model,
+        epoch number and epoch loss `post_epoch_callback(net, epoch_no, epoch_loss)` after each epoch.
     """
 
     @validated()
@@ -118,7 +118,7 @@ class Trainer:
         weight_decay: float = 1e-8,
         init: Union[str, mx.initializer.Initializer] = "xavier",
         hybridize: bool = True,
-        post_epoch_callback: Optional[Callable[[int, float], None]] = None,
+        post_epoch_callback: Optional[Callable[[nn.HybridBlock, int, float], None]] = None,
     ) -> None:
 
         assert (
@@ -313,7 +313,7 @@ class Trainer:
                             epoch_no, validation_iter, is_training=False
                         )
                     if self.post_epoch_callback is not None:
-                        self.post_epoch_callback(epoch_no, epoch_loss)
+                        self.post_epoch_callback(net, epoch_no, epoch_loss)
 
                     should_continue = lr_scheduler.step(loss_value(epoch_loss))
                     if not should_continue:
